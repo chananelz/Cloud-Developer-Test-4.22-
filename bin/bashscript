@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# set path to GetCurrentWeather 
+export GET_CURRENT_WEATHER_BIN=/home/chananelz/GetCurrentWeather
+
+
+# stage 1 Running the app for each city
+while read -r line; do  
+dotnet run --city  "${line}" --project "${GET_CURRENT_WEATHER_BIN}" >> output.txt &
+wait $!
+if [[ $? != 0 ]]; then
+        echo "Could not pull the weather info for ${line}"
+
+    fi
+
+done < $1  
+
+# stage 2 - Output processing
+# Note - the output may contain some warning message that we need to clean
+while read -r line;
+do
+
+
+    IFS='|'
+    #Read the split words into an array 
+    read -a strarr <<< "$line"
+
+    if [[ ${strarr[0]} != "Error " ]] && [[ ${#strarr[@]} == 5 ]] ; then
+        echo "${strarr[1]}  ${strarr[0]}" >> result.txt
+
+    fi
+done < output.txt
+
+sort -r  result.txt >> s_result.txt
+
+
+# stage 3 print the result according to the question
+COUNTER=0
+echo "Three hottest cities are:"
+while read -r line;
+do
+    IFS=' '
+    #Read the split words into an array based on comma delimiter
+    read -a strarr <<< "$line"
+    COUNTER=$[$COUNTER +1]
+
+    echo "$COUNTER. ${strarr[1]}  (${strarr[0]}C)" 
+
+    if [[ $COUNTER -eq 3 ]]; then
+            break
+        fi
+
+done < s_result.txt
+
+
+echo "The end"
+
+
